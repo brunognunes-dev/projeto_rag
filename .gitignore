@@ -1,0 +1,44 @@
+# Arquivos de ambiente e credenciais sensíveis
+.env
+.env.*
+!.env.example
+*.env
+secrets.json
+credentials.json
+
+# Ambientes virtuais Python
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Bytecodes e caches Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Armazenamento e dados locais do RAG
+data/storage/
+*.sqlite3
+*.db
+
+# Caches de HuggingFace / FastEmbed / ONNX
+.cache/
+fastembed_cache/
+
+# IDEs e editores de código
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db

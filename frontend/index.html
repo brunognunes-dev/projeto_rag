@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG - Bruno Gabriel Nunes — Pipeline Didático de Inteligência Artificial</title>
+  <meta name="description" content="Demonstração funcional e visual completa de um pipeline RAG com OCR, chunking, tokenização, FastEmbed e busca vetorial">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="brand-container">
+      <div class="brand-logo-icon">B</div>
+      <div>
+        <div class="brand-title">RAG - Bruno Gabriel Nunes</div>
+        <div style="font-size: 0.65rem; color: var(--text-dim);">Pipeline Didático de Engenharia de IA</div>
+      </div>
+      <span class="brand-badge">Didático • FastEmbed</span>
+    </div>
+
+    <nav class="nav-tabs">
+      <button id="tab-consult-btn" class="nav-btn active" onclick="switchView('consult')">
+        💬 Consulta / Chat RAG
+      </button>
+      <button id="tab-ingest-btn" class="nav-btn" onclick="switchView('ingest')">
+        📥 Ingestão & Pipeline
+      </button>
+    </nav>
+  </header>
+
+  <main class="app-container">
+
+    <!-- VIEW: CONSULTA / CHAT -->
+    <section id="view-consult" class="view-section active">
+      <div class="main-panel">
+        
+        <!-- Barra de Seleção de Base -->
+        <div class="glass-card selector-bar">
+          <div class="selector-group">
+            <label for="select-base" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
+              Base de Conhecimento:
+            </label>
+            <select id="select-base" class="select-input" onchange="updateBaseSelection()">
+              <option value="Notas Fiscais 2026">Notas Fiscais 2026</option>
+              <option value="Base de Suprimentos TI">Base de Suprimentos TI</option>
+              <option value="Todas as bases">Todas as bases</option>
+            </select>
+          </div>
+
+          <div style="font-size: 0.75rem; color: var(--accent-cyan); display: flex; align-items: center; gap: 6px;">
+            <span style="display:inline-block; width:8px; height:8px; background:var(--accent-emerald); border-radius:50%;"></span>
+            OpenRouter: openrouter/auto
+          </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="chat-container">
+          <div id="chat-messages" class="chat-messages">
+            <div class="message-bubble assistant">
+              👋 Olá! Sou o assistente didático do <b>RAG - Bruno Gabriel Nunes</b>.<br><br>
+              Você pode me perguntar sobre as notas fiscais cadastradas (por exemplo: <i>"Qual o valor total da nota da TechCorp?"</i> ou <i>"Quantas cadeiras ergonômicas foram compradas?"</i>).<br><br>
+              Se a informação não existir nos documentos recuperados, responderei estritamente: <b>"Sem dados disponiveis na base"</b>.
+            </div>
+          </div>
+
+          <form id="chat-form" class="chat-input-area" onsubmit="handleSendQuestion(event)">
+            <input 
+              id="question-input" 
+              type="text" 
+              class="chat-input" 
+              placeholder="Digite sua dúvida sobre os documentos..." 
+              autocomplete="off" 
+              required
+            />
+            <button id="btn-submit-question" type="submit" class="btn-send">
+              Perguntar ➔
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- Painel de Observabilidade do Pipeline RAG (Consulta) -->
+      <aside class="pipeline-panel">
+        <h3 style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">
+          🔬 Observabilidade do Pipeline RAG
+        </h3>
+        <p style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.5rem;">
+          Acompanhe em tempo real o que ocorre em cada etapa da recuperação.
+        </p>
+
+        <!-- Etapa 1: Tokenização da Pergunta -->
+        <div id="step-query-tokenization" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">1. Tokenização da Pergunta</span>
+            <span id="badge-query-tokens" class="step-badge">Aguardando</span>
+          </div>
+          <div id="content-query-tokens" class="step-content">
+            Nenhuma consulta processada ainda.
+          </div>
+        </div>
+
+        <!-- Etapa 2: Embedding Vetorial -->
+        <div id="step-query-embedding" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">2. Embedding (FastEmbed)</span>
+            <span id="badge-query-emb" class="step-badge">384 Dimensões</span>
+          </div>
+          <div id="content-query-emb" class="step-content">
+            Vetor denso BAAI/bge-small-en-v1.5.
+          </div>
+        </div>
+
+        <!-- Etapa 3: Retrieval & Top_k Candidates -->
+        <div id="step-query-retrieval" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">3. Retrieval (Top_k = 5)</span>
+            <span id="badge-query-retrieval" class="step-badge">0 Candidatos</span>
+          </div>
+          <div id="content-query-retrieval" class="step-content">
+            Candidatos recuperados por similaridade de cosseno aparecerão aqui.
+          </div>
+        </div>
+
+        <!-- Etapa 4: Prompt Aumentado -->
+        <div id="step-query-prompt" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">4. Prompt Aumentado</span>
+            <span id="badge-query-prompt" class="step-badge">Contexto Injetado</span>
+          </div>
+          <div id="content-query-prompt" class="step-content">
+            Visualização didática do prompt construído com contexto + regras anti-alucinação.
+          </div>
+        </div>
+
+        <!-- Etapa 5: Geração LLM -->
+        <div id="step-query-llm" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">5. Resposta LLM (OpenRouter)</span>
+            <span id="badge-query-llm" class="step-badge">DeepSeek / Auto</span>
+          </div>
+          <div id="content-query-llm" class="step-content">
+            Metadados da inferência e resposta final.
+          </div>
+        </div>
+
+      </aside>
+    </section>
+
+
+    <!-- VIEW: INGESTÃO -->
+    <section id="view-ingest" class="view-section">
+      <div class="main-panel">
+        
+        <div class="glass-card" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h2 style="font-size:1.15rem; font-weight:700; color:#fff;">Pipeline de Ingestão de Documentos</h2>
+            <p style="font-size:0.8rem; color:var(--text-muted);">Faça upload de novos PDFs ou carregue as 4 Notas Fiscais didáticas prontas.</p>
+          </div>
+          <button class="btn-secondary" onclick="loadSampleInvoices()">
+            ⚡ Ingerir 4 Notas Fiscais de Demonstração
+          </button>
+        </div>
+
+        <!-- Dropzone de Upload -->
+        <div class="glass-card">
+          <form id="upload-form" onsubmit="handleUploadPDF(event)">
+            <div class="dropzone" onclick="document.getElementById('pdf-file-input').click()">
+              <input type="file" id="pdf-file-input" accept=".pdf" style="display:none;" onchange="onFileSelected(event)">
+              <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
+              <div id="file-chosen-label" style="font-size:0.95rem; font-weight:600; color:var(--text-main);">
+                Clique para selecionar um arquivo PDF de Nota Fiscal
+              </div>
+              <div style="font-size:0.75rem; color:var(--text-dim); margin-top:4px;">
+                Suporta PDFs nativos e digitalizados (OCR e extração estruturada)
+              </div>
+            </div>
+
+            <div style="margin-top: 1rem; display:flex; justify-content:flex-end; gap:0.75rem;">
+              <button type="submit" id="btn-upload-submit" class="btn-send" style="display:none;">
+                Iniciar Processamento RAG ➔
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Tabela de Documentos Cadastrados -->
+        <div class="glass-card">
+          <h3 style="font-size:0.95rem; font-weight:700; margin-bottom:0.75rem;">Documentos na Base Estruturada</h3>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.825rem; text-align:left;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border-color); color:var(--accent-cyan);">
+                  <th style="padding:8px;">Arquivo</th>
+                  <th style="padding:8px;">NF</th>
+                  <th style="padding:8px;">Fornecedor</th>
+                  <th style="padding:8px;">CNPJ</th>
+                  <th style="padding:8px;">Total</th>
+                </tr>
+              </thead>
+              <tbody id="documents-table-body">
+                <tr>
+                  <td colspan="5" style="padding:16px; text-align:center; color:var(--text-dim);">
+                    Nenhum documento carregado ainda. Clique em "Ingerir 4 Notas Fiscais de Demonstração" acima.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Observabilidade da Ingestão -->
+      <aside class="pipeline-panel">
+        <h3 style="font-size: 0.95rem; font-weight: 700; color: #fff;">
+          📊 Etapas da Ingestão Executada
+        </h3>
+
+        <!-- Ingestão 1: Leitura e OCR -->
+        <div id="ingest-step-ocr" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">1. OCR & Extração Estruturada</span>
+            <span id="badge-ingest-ocr" class="step-badge">Pendente</span>
+          </div>
+          <div id="content-ingest-ocr" class="step-content">
+            Aguardando arquivo PDF...
+          </div>
+        </div>
+
+        <!-- Ingestão 2: Chunking -->
+        <div id="ingest-step-chunking" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">2. Divisão em Chunks</span>
+            <span id="badge-ingest-chunking" class="step-badge">Pendente</span>
+          </div>
+          <div id="content-ingest-chunking" class="step-content">
+            Tamanho e sobreposição dos trechos com metadados de rastreabilidade.
+          </div>
+        </div>
+
+        <!-- Ingestão 3: Tokenização -->
+        <div id="ingest-step-tokenization" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">3. Tokenização Explícita</span>
+            <span id="badge-ingest-tokenization" class="step-badge">Pendente</span>
+          </div>
+          <div id="content-ingest-tokenization" class="step-content">
+            Contagem de tokens e IDs de vocabulário.
+          </div>
+        </div>
+
+        <!-- Ingestão 4: FastEmbed -->
+        <div id="ingest-step-embedding" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">4. Geração de Embeddings</span>
+            <span id="badge-ingest-embedding" class="step-badge">FastEmbed</span>
+          </div>
+          <div id="content-ingest-embedding" class="step-content">
+            Vetor 384d gerado localmente com ONNX Runtime.
+          </div>
+        </div>
+
+        <!-- Ingestão 5: PGVector & Armazenamento -->
+        <div id="ingest-step-storage" class="pipeline-step">
+          <div class="step-header">
+            <span class="step-title">5. PGVector & Armazenamento</span>
+            <span id="badge-ingest-storage" class="step-badge">Supabase</span>
+          </div>
+          <div id="content-ingest-storage" class="step-content">
+            Índice vetorial com HNSW e persistência tabular.
+          </div>
+        </div>
+
+      </aside>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
